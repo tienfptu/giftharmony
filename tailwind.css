@@ -1,0 +1,126 @@
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .all-\[unset\] {
+    all: unset;
+  }
+}
+
+:root {
+  --blue-1: rgba(55, 149, 189, 1);
+  --font-colorblue: rgba(55, 149, 189, 1);
+  --font-style-inter-body-font-family: "Inter", Helvetica;
+  --font-style-inter-body-font-size: 16px;
+  --font-style-inter-body-font-style: normal;
+  --font-style-inter-body-font-weight: 400;
+  --font-style-inter-body-letter-spacing: 0px;
+  --font-style-inter-body-line-height: 140%;
+  --font-style-inter-caption-font-family: "Inter", Helvetica;
+  --font-style-inter-caption-font-size: 10px;
+  --font-style-inter-caption-font-style: normal;
+  --font-style-inter-caption-font-weight: 400;
+  --font-style-inter-caption-letter-spacing: 0px;
+  --font-style-inter-caption-line-height: 140%;
+  --font-style-inter-label-font-family: "Inter", Helvetica;
+  --font-style-inter-label-font-size: 14px;
+  --font-style-inter-label-font-style: normal;
+  --font-style-inter-label-font-weight: 400;
+  --font-style-inter-label-letter-spacing: 0px;
+  --font-style-inter-label-line-height: 140%;
+  --font-style-inter-title-font-family: "Inter", Helvetica;
+  --font-style-inter-title-font-size: 20px;
+  --font-style-inter-title-font-style: normal;
+  --font-style-inter-title-font-weight: 700;
+  --font-style-inter-title-letter-spacing: 0px;
+  --font-style-inter-title-line-height: normal;
+  --grayscale-1: rgba(255, 255, 255, 1);
+  --grayscale-2: rgba(247, 247, 248, 1);
+  --grayscale-5: rgba(57, 57, 57, 1);
+  --grayscale-6: rgba(0, 0, 0, 1);
+  --primary-black: rgba(5, 12, 38, 1);
+  --stroke-colorgray: rgba(155, 155, 155, 1);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --card: transparent;
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 215 20.2% 65.1%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+
+    --card: transparent;
+    --card-foreground: 213 31% 91%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 216 34% 17%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
