@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 class ApiService {
   private baseURL: string;
@@ -6,12 +7,12 @@ class ApiService {
 
   constructor() {
     this.baseURL = API_BASE_URL;
-    this.token = localStorage.getItem('auth_token');
+    this.token = localStorage.getItem("auth_token");
   }
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     if (this.token) {
@@ -23,8 +24,12 @@ class ApiService {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Network error' }));
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Network error" }));
+      throw new Error(
+        error.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return response.json();
@@ -33,9 +38,9 @@ class ApiService {
   setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      localStorage.setItem("auth_token", token);
     } else {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem("auth_token");
     }
   }
 
@@ -48,7 +53,7 @@ class ApiService {
     phone?: string;
   }) {
     const response = await fetch(`${this.baseURL}/auth/register`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(userData),
     });
@@ -58,7 +63,7 @@ class ApiService {
 
   async login(credentials: { email: string; password: string }) {
     const response = await fetch(`${this.baseURL}/auth/login`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(credentials),
     });
@@ -82,10 +87,10 @@ class ApiService {
     limit?: number;
   }) {
     const searchParams = new URLSearchParams();
-    if (params?.category) searchParams.append('category', params.category);
-    if (params?.search) searchParams.append('search', params.search);
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.category) searchParams.append("category", params.category);
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
 
     const response = await fetch(`${this.baseURL}/products?${searchParams}`, {
       headers: this.getHeaders(),
@@ -104,7 +109,7 @@ class ApiService {
 
   async createProduct(productData: any) {
     const response = await fetch(`${this.baseURL}/products`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(productData),
     });
@@ -114,7 +119,7 @@ class ApiService {
 
   async updateProduct(id: number, productData: any) {
     const response = await fetch(`${this.baseURL}/products/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(productData),
     });
@@ -124,7 +129,7 @@ class ApiService {
 
   async deleteProduct(id: number) {
     const response = await fetch(`${this.baseURL}/products/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getHeaders(),
     });
 
@@ -142,7 +147,7 @@ class ApiService {
 
   async createCategory(categoryData: any) {
     const response = await fetch(`${this.baseURL}/categories`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(categoryData),
     });
@@ -161,7 +166,7 @@ class ApiService {
 
   async addToCart(productId: number, quantity: number = 1) {
     const response = await fetch(`${this.baseURL}/cart`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ product_id: productId, quantity }),
     });
@@ -171,7 +176,7 @@ class ApiService {
 
   async updateCartItem(id: number, quantity: number) {
     const response = await fetch(`${this.baseURL}/cart/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify({ quantity }),
     });
@@ -181,7 +186,7 @@ class ApiService {
 
   async removeFromCart(id: number) {
     const response = await fetch(`${this.baseURL}/cart/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getHeaders(),
     });
 
@@ -190,7 +195,7 @@ class ApiService {
 
   async clearCart() {
     const response = await fetch(`${this.baseURL}/cart`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getHeaders(),
     });
 
@@ -211,7 +216,7 @@ class ApiService {
     shipping_address: string;
   }) {
     const response = await fetch(`${this.baseURL}/orders`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(orderData),
     });
@@ -230,7 +235,7 @@ class ApiService {
 
   async addToWishlist(productId: number) {
     const response = await fetch(`${this.baseURL}/wishlist`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ product_id: productId }),
     });
@@ -240,7 +245,7 @@ class ApiService {
 
   async removeFromWishlist(id: number) {
     const response = await fetch(`${this.baseURL}/wishlist/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: this.getHeaders(),
     });
 
@@ -248,19 +253,25 @@ class ApiService {
   }
 
   async removeFromWishlistByProduct(productId: number) {
-    const response = await fetch(`${this.baseURL}/wishlist/product/${productId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${this.baseURL}/wishlist/product/${productId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      }
+    );
 
     return this.handleResponse(response);
   }
 
   // Reviews endpoints
   async getProductReviews(productId: number) {
-    const response = await fetch(`${this.baseURL}/reviews/product/${productId}`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${this.baseURL}/reviews/product/${productId}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
 
     return this.handleResponse(response);
   }
@@ -271,7 +282,7 @@ class ApiService {
     comment: string;
   }) {
     const response = await fetch(`${this.baseURL}/reviews`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(reviewData),
     });
@@ -294,7 +305,7 @@ class ApiService {
     phone?: string;
   }) {
     const response = await fetch(`${this.baseURL}/users/profile`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(profileData),
     });
@@ -307,7 +318,7 @@ class ApiService {
     new_password: string;
   }) {
     const response = await fetch(`${this.baseURL}/users/password`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(passwordData),
     });
@@ -324,10 +335,13 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async getSalesAnalytics(period: string = 'month') {
-    const response = await fetch(`${this.baseURL}/admin/analytics/sales?period=${period}`, {
-      headers: this.getHeaders(),
-    });
+  async getSalesAnalytics(period: string = "month") {
+    const response = await fetch(
+      `${this.baseURL}/admin/analytics/sales?period=${period}`,
+      {
+        headers: this.getHeaders(),
+      }
+    );
 
     return this.handleResponse(response);
   }
@@ -350,7 +364,7 @@ class ApiService {
 
   async updateOrderStatus(orderId: number, status: string) {
     const response = await fetch(`${this.baseURL}/orders/${orderId}/status`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify({ status }),
     });
@@ -367,18 +381,21 @@ class ApiService {
   }
 
   async updateUserStatus(userId: number, isActive: boolean) {
-    const response = await fetch(`${this.baseURL}/users/admin/${userId}/status`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ is_active: isActive }),
-    });
+    const response = await fetch(
+      `${this.baseURL}/users/admin/${userId}/status`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ is_active: isActive }),
+      }
+    );
 
     return this.handleResponse(response);
   }
 
   async updateUserRole(userId: number, role: string) {
     const response = await fetch(`${this.baseURL}/users/admin/${userId}/role`, {
-      method: 'PUT',
+      method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify({ role }),
     });
