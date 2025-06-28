@@ -1,25 +1,26 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'ecommerce_db',
-  port: process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+// For PostgreSQL, we'll use pg instead of mysql2
+const { Pool } = require('pg');
 
-const pool = mysql.createPool(dbConfig);
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 5432,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 // Test database connection
 async function testConnection() {
   try {
-    const connection = await pool.getConnection();
+    const client = await pool.connect();
     console.log('Database connected successfully');
-    connection.release();
+    client.release();
   } catch (error) {
     console.error('Database connection failed:', error.message);
   }

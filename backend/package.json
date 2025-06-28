@@ -1,7 +1,7 @@
 {
-  "name": "ecommerce-backend",
+  "name": "giftharmony-backend",
   "version": "1.0.0",
-  "description": "Backend API for ecommerce application",
+  "description": "Backend API for GiftHarmony ecommerce application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,13 +15,13 @@
     "dotenv": "^16.3.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.6.0",
+    "pg": "^8.11.3",
     "joi": "^17.9.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["ecommerce", "api", "backend"],
-  "author": "",
+  "keywords": ["ecommerce", "api", "backend", "giftharmony"],
+  "author": "GiftHarmony Team",
   "license": "ISC"
 }

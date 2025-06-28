@@ -1,13 +1,25 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiService } from '../services/api';
+import { useAuth } from './AuthContext';
+
+interface WishlistItem {
+  id: number;
+  product_id: number;
+  name: string;
+  price: number;
+  image_url: string;
+  stock_quantity: number;
+}
 
 interface WishlistContextType {
   wishlistItems: number[];
-  addToWishlist: (productId: number) => void;
-  removeFromWishlist: (productId: number) => void;
+  isLoading: boolean;
+  addToWishlist: (productId: number) => Promise<void>;
+  removeFromWishlist: (productId: number) => Promise<void>;
   isInWishlist: (productId: number) => boolean;
-  toggleWishlist: (productId: number) => void;
+  toggleWishlist: (productId: number) => Promise<void>;
   getWishlistCount: () => number;
+  loadWishlist: () => Promise<void>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -25,30 +37,78 @@ interface WishlistProviderProps {
 }
 
 export const WishlistProvider = ({ children }: WishlistProviderProps) => {
-  const [wishlistItems, setWishlistItems] = useLocalStorage<number[]>('wishlist', []);
+  const [wishlistItems, setWishlistItems] = useState<number[]>([]);
+  const [wishlistData, setWishlistData] = useState<WishlistItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  const addToWishlist = (productId: number) => {
-    setWishlistItems(prev => {
-      if (!prev.includes(productId)) {
-        return [...prev, productId];
-      }
-      return prev;
-    });
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadWishlist();
+    } else {
+      setWishlistItems([]);
+      setWishlistData([]);
+    }
+  }, [isAuthenticated]);
+
+  const loadWishlist = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setIsLoading(true);
+      const data = await apiService.getWishlist();
+      setWishlistData(data);
+      setWishlistItems(data.map((item: WishlistItem) => item.product_id));
+    } catch (error) {
+      console.error('Failed to load wishlist:', error);
+      setWishlistItems([]);
+      setWishlistData([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeFromWishlist = (productId: number) => {
-    setWishlistItems(prev => prev.filter(id => id !== productId));
+  const addToWishlist = async (productId: number) => {
+    if (!isAuthenticated) {
+      throw new Error('Please login to add items to wishlist');
+    }
+
+    try {
+      await apiService.addToWishlist(productId);
+      setWishlistItems(prev => {
+        if (!prev.includes(productId)) {
+          return [...prev, productId];
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error('Failed to add to wishlist:', error);
+      throw error;
+    }
+  };
+
+  const removeFromWishlist = async (productId: number) => {
+    if (!isAuthenticated) return;
+
+    try {
+      await apiService.removeFromWishlistByProduct(productId);
+      setWishlistItems(prev => prev.filter(id => id !== productId));
+      setWishlistData(prev => prev.filter(item => item.product_id !== productId));
+    } catch (error) {
+      console.error('Failed to remove from wishlist:', error);
+      throw error;
+    }
   };
 
   const isInWishlist = (productId: number) => {
     return wishlistItems.includes(productId);
   };
 
-  const toggleWishlist = (productId: number) => {
+  const toggleWishlist = async (productId: number) => {
     if (isInWishlist(productId)) {
-      removeFromWishlist(productId);
+      await removeFromWishlist(productId);
     } else {
-      addToWishlist(productId);
+      await addToWishlist(productId);
     }
   };
 
@@ -58,11 +118,13 @@ export const WishlistProvider = ({ children }: WishlistProviderProps) => {
 
   const value: WishlistContextType = {
     wishlistItems,
+    isLoading,
     addToWishlist,
     removeFromWishlist,
     isInWishlist,
     toggleWishlist,
-    getWishlistCount
+    getWishlistCount,
+    loadWishlist
   };
 
   return (
