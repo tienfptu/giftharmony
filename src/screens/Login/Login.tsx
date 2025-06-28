@@ -32,6 +32,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
     email: "",
     password: "",
     confirmPassword: "",
+    phone: "",
     agreeTerms: false
   });
   
@@ -93,6 +94,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateLoginForm()) return;
+<<<<<<< HEAD
 
     setIsLoading(true);
     try {
@@ -104,6 +106,11 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
         return;
       }
 
+=======
+
+    setIsLoading(true);
+    try {
+>>>>>>> cuoidino/main
       await login(loginForm.email, loginForm.password);
       
       addToast({
@@ -113,14 +120,25 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
         duration: 3000
       });
 
+<<<<<<< HEAD
       if (onLoginSuccess) {
+=======
+      // Check if admin login
+      if (loginForm.email === 'admin@example.com' && onAdminLogin) {
+        onAdminLogin();
+      } else if (onLoginSuccess) {
+>>>>>>> cuoidino/main
         onLoginSuccess();
       }
     } catch (error: any) {
       addToast({
         type: 'error',
         title: 'Đăng nhập thất bại',
+<<<<<<< HEAD
         description: error.message || 'Vui lòng kiểm tra lại thông tin đăng nhập',
+=======
+        description: error.message || 'Có lỗi xảy ra, vui lòng thử lại',
+>>>>>>> cuoidino/main
         duration: 5000
       });
     } finally {
@@ -134,7 +152,20 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
 
     setIsLoading(true);
     try {
+<<<<<<< HEAD
       await register(registerForm.email, registerForm.password, registerForm.fullName);
+=======
+      const [firstName, ...lastNameParts] = registerForm.fullName.trim().split(' ');
+      const lastName = lastNameParts.join(' ') || firstName;
+
+      await register({
+        email: registerForm.email,
+        password: registerForm.password,
+        first_name: firstName,
+        last_name: lastName,
+        phone: registerForm.phone || undefined
+      });
+>>>>>>> cuoidino/main
       
       addToast({
         type: 'success',
@@ -150,7 +181,11 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
       addToast({
         type: 'error',
         title: 'Đăng ký thất bại',
+<<<<<<< HEAD
         description: error.message || 'Có lỗi xảy ra khi tạo tài khoản',
+=======
+        description: error.message || 'Có lỗi xảy ra, vui lòng thử lại',
+>>>>>>> cuoidino/main
         duration: 5000
       });
     } finally {
@@ -211,7 +246,11 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         type="email"
                         value={loginForm.email}
                         onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+<<<<<<< HEAD
                         placeholder="Nhập email (admin@giftharmony.com để vào quản lý)"
+=======
+                        placeholder="Nhập email (admin@example.com để vào quản lý)"
+>>>>>>> cuoidino/main
                         className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.email ? 'border-red-500' : ''}`}
                         disabled={isLoading}
                       />
@@ -239,6 +278,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -260,6 +300,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         checked={loginForm.rememberMe}
                         onCheckedChange={(checked) => setLoginForm({...loginForm, rememberMe: !!checked})}
                         className="border-black w-[15px] h-[15px] rounded-none"
+                        disabled={isLoading}
                       />
                       <label
                         htmlFor="remember"
@@ -271,6 +312,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                     <button 
                       type="button"
                       className="font-['Poppins',Helvetica] font-light text-black text-xs hover:underline"
+                      disabled={isLoading}
                     >
                       Quên mật khẩu?
                     </button>
@@ -279,14 +321,22 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                   <Button 
                     type="submit"
                     disabled={isLoading}
+<<<<<<< HEAD
                     className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors"
+=======
+                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors disabled:opacity-50"
+>>>>>>> cuoidino/main
                   >
                     {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                   </Button>
 
                   <div className="text-center mt-4">
                     <p className="text-sm text-gray-600">
+<<<<<<< HEAD
                       Tài khoản quản lý: <strong>admin@giftharmony.com</strong> / <strong>admin123</strong>
+=======
+                      Tài khoản quản lý: <strong>admin@example.com</strong> / <strong>admin123</strong>
+>>>>>>> cuoidino/main
                     </p>
                   </div>
                 </form>
@@ -334,6 +384,22 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
 
                     <div className="mb-6">
                       <label className="block text-left font-['Poppins',Helvetica] font-normal text-black text-sm sm:text-base mb-2">
+<<<<<<< HEAD
+=======
+                        Số điện thoại (tùy chọn)
+                      </label>
+                      <Input
+                        value={registerForm.phone}
+                        onChange={(e) => setRegisterForm({...registerForm, phone: e.target.value})}
+                        placeholder="Nhập số điện thoại"
+                        className="h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full"
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-left font-['Poppins',Helvetica] font-normal text-black text-sm sm:text-base mb-2">
+>>>>>>> cuoidino/main
                         Mật khẩu
                       </label>
                       <div className="relative">
@@ -351,6 +417,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -383,6 +450,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          disabled={isLoading}
                         >
                           {showConfirmPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -404,6 +472,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         checked={registerForm.agreeTerms}
                         onCheckedChange={(checked) => setRegisterForm({...registerForm, agreeTerms: !!checked})}
                         className={`border-black w-[15px] h-[15px] rounded-none mt-1 flex-shrink-0 ${errors.agreeTerms ? 'border-red-500' : ''}`}
+                        disabled={isLoading}
                       />
                       <label
                         htmlFor="terms"
@@ -427,7 +496,11 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                   <Button 
                     type="submit"
                     disabled={isLoading}
+<<<<<<< HEAD
                     className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors"
+=======
+                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors disabled:opacity-50"
+>>>>>>> cuoidino/main
                   >
                     {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
                   </Button>

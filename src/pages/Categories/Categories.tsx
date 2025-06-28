@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Grid, List, Filter, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -6,7 +6,7 @@ import { ProductCard, EmptyState, LoadingSpinner } from '../../components/common
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/toast';
-import { FEATURED_PRODUCTS } from '../../data/mockData';
+import { apiService } from '../../services/api';
 import { CATEGORIES } from '../../constants';
 import { Product } from '../../types';
 
@@ -22,31 +22,66 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('popular');
   const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const { addToCart } = useCart();
   const { requireAuth } = useAuth();
   const { addToast } = useToast();
 
-  // Filter products by category
-  const categoryProducts = FEATURED_PRODUCTS.filter(product => 
-    product.category === activeCategory
-  );
+  useEffect(() => {
+    loadProducts();
+  }, [activeCategory, sortBy]);
 
-  // Sort products
-  const sortedProducts = [...categoryProducts].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.priceNumber - b.priceNumber;
-      case 'price-high':
-        return b.priceNumber - a.priceNumber;
-      case 'rating':
-        return b.rating - a.rating;
-      case 'name':
-        return a.name.localeCompare(b.name);
-      default:
-        return 0;
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.getProducts({ 
+        category: activeCategory,
+        limit: 20 
+      });
+      
+      const transformedProducts = response.products.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        price: new Intl.NumberFormat('vi-VN').format(product.price) + 'đ',
+        priceNumber: product.price,
+        image: product.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+        rating: 4.5, // Default rating
+        category: product.category_name || activeCategory,
+        maxQuantity: product.stock_quantity || 10,
+        inStock: product.stock_quantity > 0
+      }));
+
+      // Sort products
+      const sortedProducts = [...transformedProducts].sort((a, b) => {
+        switch (sortBy) {
+          case 'price-low':
+            return a.priceNumber - b.priceNumber;
+          case 'price-high':
+            return b.priceNumber - a.priceNumber;
+          case 'rating':
+            return b.rating - a.rating;
+          case 'name':
+            return a.name.localeCompare(b.name);
+          default:
+            return 0;
+        }
+      });
+
+      setProducts(sortedProducts);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      setProducts([]);
+      addToast({
+        type: 'error',
+        title: 'Lỗi tải sản phẩm',
+        description: 'Không thể tải danh sách sản phẩm',
+        duration: 3000
+      });
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -72,13 +107,7 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
   };
 
   const handleCategoryChange = (categoryName: string) => {
-    setIsLoading(true);
     setActiveCategory(categoryName);
-    
-    // Simulate loading
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
   };
 
   const selectedCategoryData = CATEGORIES.find(cat => cat.name === activeCategory);
@@ -189,7 +218,7 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
                     {activeCategory}
                   </h2>
                   <p className="text-gray-600">
-                    {isLoading ? 'Đang tải...' : `${sortedProducts.length} sản phẩm`}
+                    {isLoading ? 'Đang tải...' : `${products.length} sản phẩm`}
                   </p>
                 </div>
               </div>
@@ -203,7 +232,7 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
             )}
 
             {/* Empty State */}
-            {!isLoading && sortedProducts.length === 0 && (
+            {!isLoading && products.length === 0 && (
               <EmptyState
                 icon={<SlidersHorizontal className="h-24 w-24" />}
                 title="Chưa có sản phẩm"
@@ -214,12 +243,12 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
             )}
 
             {/* Products Grid/List */}
-            {!isLoading && sortedProducts.length > 0 && (
+            {!isLoading && products.length > 0 && (
               <div className={viewMode === 'grid' 
                 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
                 : 'space-y-4'
               }>
-                {sortedProducts.map((product) => (
+                {products.map((product) => (
                   viewMode === 'grid' ? (
                     <ProductCard
                       key={product.id}
@@ -243,11 +272,6 @@ export const Categories = ({ onBack, onViewProduct, onViewCart, selectedCategory
                             <p className="text-sm text-gray-500">{product.category}</p>
                             <div className="flex items-center mt-1">
                               <span className="font-bold text-[#49bbbd] mr-2">{product.price}</span>
-                              {product.originalPrice && (
-                                <span className="text-sm text-gray-400 line-through">
-                                  {product.originalPrice}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center mt-1">
                               <span className="text-sm text-gray-600">⭐ {product.rating}</span>

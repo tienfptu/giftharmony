@@ -8,8 +8,14 @@ import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useToast } from '../../components/ui/toast';
+<<<<<<< HEAD
 import { useProducts, useCategories } from '../../hooks/useProducts';
 import { productService } from '../../services/products';
+=======
+import { apiService } from '../../services/api';
+import { CATEGORIES } from '../../constants';
+import { Product } from '../../types';
+>>>>>>> cuoidino/main
 
 interface DashboardProps {
   onViewProduct?: (productId: number) => void;
@@ -39,15 +45,23 @@ export const Dashboard = ({
   onViewOrderHistory
 }: DashboardProps): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
+<<<<<<< HEAD
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
   
+=======
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+>>>>>>> cuoidino/main
   const { getTotalItems, addToCart } = useCart();
   const { user, logout, requireAuth } = useAuth();
   const { toggleWishlist, isInWishlist, getWishlistCount } = useWishlist();
   const { addToast } = useToast();
   const { categories } = useCategories();
 
+<<<<<<< HEAD
   // Load featured products
   useEffect(() => {
     const loadFeaturedProducts = async () => {
@@ -65,6 +79,66 @@ export const Dashboard = ({
   }, []);
 
   const handleProductClick = (productId: string) => {
+=======
+  useEffect(() => {
+    loadFeaturedProducts();
+    loadUpcomingEvents();
+  }, []);
+
+  const loadFeaturedProducts = async () => {
+    try {
+      const response = await apiService.getProducts({ limit: 4 });
+      const transformedProducts = response.products.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        price: new Intl.NumberFormat('vi-VN').format(product.price) + 'đ',
+        priceNumber: product.price,
+        image: product.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+        rating: 4.5, // Default rating since not in API
+        category: product.category_name || 'Sản phẩm',
+        maxQuantity: product.stock_quantity || 10,
+        inStock: product.stock_quantity > 0
+      }));
+      setFeaturedProducts(transformedProducts);
+    } catch (error) {
+      console.error('Failed to load featured products:', error);
+      // Fallback to empty array
+      setFeaturedProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadUpcomingEvents = () => {
+    // Load from localStorage or use default events
+    const savedEvents = localStorage.getItem('user-events');
+    if (savedEvents) {
+      const events = JSON.parse(savedEvents);
+      const upcoming = events.filter((event: any) => event.daysLeft > 0).slice(0, 3);
+      setUpcomingEvents(upcoming);
+    } else {
+      // Default events
+      setUpcomingEvents([
+        {
+          id: 1,
+          title: 'Sinh nhật mẹ',
+          date: '15/02/2025',
+          type: 'Sinh nhật',
+          daysLeft: 12
+        },
+        {
+          id: 2,
+          title: 'Valentine',
+          date: '14/02/2025',
+          type: 'Lễ tình nhân',
+          daysLeft: 11
+        }
+      ]);
+    }
+  };
+
+  const handleProductClick = (productId: number) => {
+>>>>>>> cuoidino/main
     if (onViewProduct) {
       onViewProduct(parseInt(productId));
     }
@@ -103,6 +177,7 @@ export const Dashboard = ({
   const handleQuickAddToCart = async (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     
+<<<<<<< HEAD
     requireAuth(async () => {
       try {
         await addToCart({
@@ -114,6 +189,42 @@ export const Dashboard = ({
           category: product.category?.name || '',
           inStock: product.stock_count > 0,
           maxQuantity: product.max_quantity
+=======
+    requireAuth(() => {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.priceNumber,
+        image: product.image,
+        category: product.category,
+        inStock: product.inStock || true,
+        maxQuantity: product.maxQuantity
+      });
+
+      addToast({
+        type: 'success',
+        title: 'Đã thêm vào giỏ hàng',
+        description: `${product.name} đã được thêm vào giỏ hàng`,
+        duration: 3000
+      });
+    });
+  };
+
+  const handleToggleFavorite = (productId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    requireAuth(() => {
+      const wasInWishlist = isInWishlist(productId);
+      toggleWishlist(productId);
+      const product = featuredProducts.find(p => p.id === productId);
+      
+      if (wasInWishlist) {
+        addToast({
+          type: 'info',
+          title: 'Đã xóa khỏi yêu thích',
+          description: `${product?.name} đã được xóa khỏi danh sách yêu thích`,
+          duration: 3000
+>>>>>>> cuoidino/main
         });
 
         addToast({
@@ -194,7 +305,11 @@ export const Dashboard = ({
     { label: 'Điểm tích lũy', value: user?.points?.toLocaleString() || '0', icon: <Star className="h-8 w-8 opacity-80" />, color: 'from-[#49bbbd] to-[#3a9a9c]' },
     { label: 'Hạng thành viên', value: user?.level || 'New Member', icon: <Gift className="h-8 w-8 opacity-80" />, color: 'from-[#ccb3ac] to-[#bba39c]' },
     { label: 'Quà đã tặng', value: '24', icon: <Heart className="h-8 w-8" />, color: 'bg-white', textColor: 'text-red-500' },
+<<<<<<< HEAD
     { label: 'Sự kiện sắp tới', value: '3', icon: <Calendar className="h-8 w-8" />, color: 'bg-white', textColor: 'text-blue-500' }
+=======
+    { label: 'Sự kiện sắp tới', value: upcomingEvents.length.toString(), icon: <Calendar className="h-8 w-8" />, color: 'bg-white', textColor: 'text-blue-500' }
+>>>>>>> cuoidino/main
   ];
 
   const convertToLegacyProduct = (product: any) => ({
@@ -290,6 +405,7 @@ export const Dashboard = ({
                 </Button>
               </CardHeader>
               <CardContent>
+<<<<<<< HEAD
                 {isLoadingFeatured ? (
                   <div className="flex justify-center py-8">
                     <LoadingSpinner size="lg" />
@@ -300,6 +416,24 @@ export const Dashboard = ({
                       <ProductCard
                         key={product.id}
                         product={convertToLegacyProduct(product)}
+=======
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="bg-gray-200 aspect-square rounded-lg mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : featuredProducts.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {featuredProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+>>>>>>> cuoidino/main
                         onProductClick={handleProductClick}
                         onAddToCart={handleQuickAddToCart}
                         onToggleFavorite={handleToggleFavorite}
@@ -307,6 +441,13 @@ export const Dashboard = ({
                       />
                     ))}
                   </div>
+<<<<<<< HEAD
+=======
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Không có sản phẩm nào để hiển thị</p>
+                  </div>
+>>>>>>> cuoidino/main
                 )}
               </CardContent>
             </Card>
@@ -323,6 +464,7 @@ export const Dashboard = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+<<<<<<< HEAD
                 {[
                   { id: 1, title: 'Sinh nhật mẹ', date: '15/02/2025', type: 'Sinh nhật', daysLeft: 12 },
                   { id: 2, title: 'Valentine', date: '14/02/2025', type: 'Lễ tình nhân', daysLeft: 11 },
@@ -342,14 +484,45 @@ export const Dashboard = ({
                       </p>
                       <p className="text-xs text-gray-500">còn lại</p>
                     </div>
+=======
+                {upcomingEvents.length > 0 ? (
+                  <>
+                    {upcomingEvents.map((event) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{event.title}</h4>
+                          <p className="text-sm text-gray-500">{event.date}</p>
+                          <span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {event.type}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-[#49bbbd]">
+                            {event.daysLeft} ngày
+                          </p>
+                          <p className="text-xs text-gray-500">còn lại</p>
+                        </div>
+                      </div>
+                    ))}
+                    <Button 
+                      className="w-full bg-[#ccb3ac] hover:bg-[#bba39c] text-black"
+                      onClick={onViewEvents}
+                    >
+                      Quản lý sự kiện
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500 mb-4">Chưa có sự kiện nào</p>
+                    <Button 
+                      className="bg-[#ccb3ac] hover:bg-[#bba39c] text-black"
+                      onClick={onViewEvents}
+                    >
+                      Thêm sự kiện
+                    </Button>
+>>>>>>> cuoidino/main
                   </div>
-                ))}
-                <Button 
-                  className="w-full bg-[#ccb3ac] hover:bg-[#bba39c] text-black"
-                  onClick={onViewEvents}
-                >
-                  Quản lý sự kiện
-                </Button>
+                )}
               </CardContent>
             </Card>
 
