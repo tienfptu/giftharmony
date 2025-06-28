@@ -1,261 +1,149 @@
-# GiftHarmony Backend API
+# E-commerce Backend API
 
-A comprehensive Node.js backend for the GiftHarmony e-commerce platform with PostgreSQL database and JWT authentication.
+A RESTful API for an e-commerce application built with Node.js, Express, and MySQL.
 
 ## Features
 
-- 🔐 JWT Authentication & Authorization
-- 👥 User Management (Customer & Admin roles)
-- 🛍️ Product Management with Categories
-- 🛒 Shopping Cart & Wishlist
-- 📦 Order Management with Status Tracking
-- ⭐ Product Reviews & Ratings
-- 🎫 Promotion & Discount System
-- 📊 Admin Dashboard with Analytics
-- 🔒 Security with Rate Limiting & Validation
-- 📱 RESTful API Design
+- User authentication and authorization
+- Product management
+- Category management
+- Shopping cart functionality
+- Order processing
+- Wishlist management
+- Product reviews
+- Admin dashboard with analytics
 
-## Tech Stack
+## Prerequisites
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL (Supabase)
-- **Authentication**: JWT
-- **Validation**: Express Validator
-- **Security**: Helmet, CORS, Rate Limiting
-- **Password Hashing**: bcryptjs
+- Node.js (v14 or higher)
+- MySQL (v8.0 or higher)
+- npm or yarn
 
-## Quick Start
+## Installation
 
-### 1. Install Dependencies
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. Create a MySQL database named `ecommerce_db`
 
-### 2. Environment Setup
+4. Copy `.env.example` to `.env` and update the configuration:
+   ```bash
+   cp .env.example .env
+   ```
 
-Copy `.env.example` to `.env` and configure your environment variables:
+5. Run database migrations:
+   ```bash
+   npm run migrate
+   ```
 
-```bash
-cp .env.example .env
-```
+6. Seed the database with sample data:
+   ```bash
+   npm run seed
+   ```
 
-Update the following variables in `.env`:
-- `DATABASE_URL`: Your PostgreSQL connection string
-- `JWT_SECRET`: A secure secret key for JWT tokens
-- `FRONTEND_URL`: Your frontend application URL
+7. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-### 3. Database Setup
-
-Run migrations to create database tables:
-
-```bash
-npm run migrate
-```
-
-Seed the database with sample data:
-
-```bash
-npm run seed
-```
-
-### 4. Start the Server
-
-Development mode:
-```bash
-npm run dev
-```
-
-Production mode:
-```bash
-npm start
-```
-
-The server will start on `http://localhost:5000`
+The API will be available at `http://localhost:5000`
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login user
 - `GET /api/auth/me` - Get current user
-- `POST /api/auth/refresh` - Refresh JWT token
 
 ### Products
-- `GET /api/products` - Get all products (with filters)
-- `GET /api/products/:id` - Get single product
+- `GET /api/products` - Get all products
+- `GET /api/products/:id` - Get product by ID
 - `POST /api/products` - Create product (Admin only)
 - `PUT /api/products/:id` - Update product (Admin only)
 - `DELETE /api/products/:id` - Delete product (Admin only)
 
 ### Categories
 - `GET /api/categories` - Get all categories
-- `GET /api/categories/:slug` - Get single category
+- `GET /api/categories/:id` - Get category by ID
 - `POST /api/categories` - Create category (Admin only)
 - `PUT /api/categories/:id` - Update category (Admin only)
 - `DELETE /api/categories/:id` - Delete category (Admin only)
 
 ### Cart
-- `GET /api/cart` - Get cart items
-- `POST /api/cart/items` - Add item to cart
-- `PUT /api/cart/items/:id` - Update cart item quantity
-- `DELETE /api/cart/items/:id` - Remove item from cart
+- `GET /api/cart` - Get user's cart
+- `POST /api/cart` - Add item to cart
+- `PUT /api/cart/:id` - Update cart item
+- `DELETE /api/cart/:id` - Remove item from cart
 - `DELETE /api/cart` - Clear cart
 
-### Wishlist
-- `GET /api/wishlist` - Get wishlist items
-- `POST /api/wishlist/items` - Add item to wishlist
-- `DELETE /api/wishlist/items/:product_id` - Remove item from wishlist
-- `POST /api/wishlist/toggle` - Toggle wishlist item
-
 ### Orders
-- `GET /api/orders` - Get user orders
-- `GET /api/orders/:id` - Get single order
+- `GET /api/orders` - Get user's orders
 - `POST /api/orders` - Create order
-- `PATCH /api/orders/:id/status` - Update order status (Admin only)
-- `PATCH /api/orders/:id/cancel` - Cancel order
+- `GET /api/orders/admin` - Get all orders (Admin only)
+- `PUT /api/orders/:id/status` - Update order status (Admin only)
+
+### Wishlist
+- `GET /api/wishlist` - Get user's wishlist
+- `POST /api/wishlist` - Add item to wishlist
+- `DELETE /api/wishlist/:id` - Remove item from wishlist
 
 ### Reviews
-- `GET /api/reviews/product/:product_id` - Get product reviews
+- `GET /api/reviews/product/:productId` - Get product reviews
 - `POST /api/reviews` - Create review
 - `PUT /api/reviews/:id` - Update review
 - `DELETE /api/reviews/:id` - Delete review
-- `POST /api/reviews/:id/helpful` - Mark review as helpful
 
 ### Users
 - `GET /api/users/profile` - Get user profile
 - `PUT /api/users/profile` - Update user profile
 - `PUT /api/users/password` - Change password
-- `GET /api/users/stats` - Get user statistics
 
 ### Admin
-- `GET /api/admin/dashboard` - Dashboard statistics
-- `GET /api/admin/orders` - Get all orders
-- `GET /api/admin/users` - Get all users
-- `PATCH /api/admin/users/:id/status` - Toggle user status
-- `GET /api/admin/analytics` - Analytics data
+- `GET /api/admin/stats` - Get dashboard statistics
+- `GET /api/admin/analytics/sales` - Get sales analytics
+- `GET /api/admin/analytics/products` - Get product analytics
+
+## Environment Variables
+
+- `DB_HOST` - Database host
+- `DB_USER` - Database username
+- `DB_PASSWORD` - Database password
+- `DB_NAME` - Database name
+- `JWT_SECRET` - JWT secret key
+- `JWT_EXPIRES_IN` - JWT expiration time
+- `PORT` - Server port
+- `FRONTEND_URL` - Frontend URL for CORS
 
 ## Database Schema
 
-### Users
-- User authentication and profile information
-- Role-based access control (customer/admin)
-- Points and loyalty level system
-
-### Products
-- Product catalog with categories
-- Inventory management
-- Rating and review system
-- Featured and popular product flags
-
-### Orders
-- Complete order lifecycle management
-- Order items with pricing history
-- Payment and shipping tracking
-- Status updates and notifications
-
-### Reviews
-- Product reviews and ratings
-- Verified purchase validation
-- Helpful votes system
-- Admin moderation
-
-## Authentication
-
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
+The application uses the following main tables:
+- `users` - User accounts
+- `categories` - Product categories
+- `products` - Product catalog
+- `orders` - Customer orders
+- `order_items` - Order line items
+- `cart` - Shopping cart items
+- `wishlist` - User wishlists
+- `reviews` - Product reviews
 
 ## Error Handling
 
-The API returns consistent error responses:
+The API returns appropriate HTTP status codes and error messages:
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `500` - Internal Server Error
 
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "errors": [] // Validation errors if applicable
-}
-```
+## Security
 
-## Security Features
-
-- Password hashing with bcrypt
-- JWT token authentication
-- Rate limiting (100 requests per 15 minutes)
-- Input validation and sanitization
-- CORS protection
-- Helmet security headers
-- SQL injection prevention with parameterized queries
-
-## Default Accounts
-
-After seeding the database, you can use these accounts:
-
-**Admin Account:**
-- Email: `admin@giftharmony.vn`
-- Password: `admin123`
-
-**Customer Account:**
-- Email: `customer@example.com`
-- Password: `customer123`
-
-## Development
-
-### Project Structure
-
-```
-backend/
-├── config/
-│   └── database.js          # Database configuration
-├── middleware/
-│   ├── auth.js              # Authentication middleware
-│   └── validation.js        # Input validation
-├── routes/
-│   ├── auth.js              # Authentication routes
-│   ├── products.js          # Product routes
-│   ├── categories.js        # Category routes
-│   ├── orders.js            # Order routes
-│   ├── cart.js              # Cart routes
-│   ├── wishlist.js          # Wishlist routes
-│   ├── reviews.js           # Review routes
-│   ├── users.js             # User routes
-│   └── admin.js             # Admin routes
-├── scripts/
-│   ├── migrate.js           # Database migrations
-│   └── seed.js              # Database seeding
-├── .env                     # Environment variables
-├── server.js                # Main server file
-└── package.json
-```
-
-### Adding New Features
-
-1. Create new route files in `/routes`
-2. Add middleware for authentication/validation
-3. Update database schema in `/scripts/migrate.js`
-4. Add sample data in `/scripts/seed.js`
-5. Test endpoints with proper error handling
-
-## Deployment
-
-1. Set `NODE_ENV=production` in your environment
-2. Configure production database URL
-3. Set secure JWT secret
-4. Enable SSL for database connections
-5. Configure CORS for your frontend domain
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
+- Passwords are hashed using bcrypt
+- JWT tokens for authentication
+- Input validation using Joi
+- SQL injection protection with parameterized queries
+- CORS configuration for cross-origin requests
