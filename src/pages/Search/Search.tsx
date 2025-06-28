@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input';
 import { ProductCard, EmptyState, LoadingSpinner } from '../../components/common';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 import { useToast } from '../../components/ui/toast';
 import { useDebounce } from '../../hooks/useDebounce';
 import { apiService } from '../../services/api';
@@ -42,6 +43,7 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
 
   const { addToCart } = useCart();
   const { requireAuth } = useAuth();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { addToast } = useToast();
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -147,6 +149,32 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
         description: `${product.name} đã được thêm vào giỏ hàng`,
         duration: 3000
       });
+    });
+  };
+
+  const handleToggleFavorite = (productId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    requireAuth(() => {
+      const wasInWishlist = isInWishlist(productId);
+      toggleWishlist(productId);
+      const product = products.find(p => p.id === productId);
+      
+      if (wasInWishlist) {
+        addToast({
+          type: 'info',
+          title: 'Đã xóa khỏi yêu thích',
+          description: `${product?.name} đã được xóa khỏi danh sách yêu thích`,
+          duration: 3000
+        });
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Đã thêm vào yêu thích',
+          description: `${product?.name} đã được thêm vào danh sách yêu thích`,
+          duration: 3000
+        });
+      }
     });
   };
 
@@ -370,6 +398,8 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
                       product={product}
                       onProductClick={onViewProduct}
                       onAddToCart={handleAddToCart}
+                      onToggleFavorite={handleToggleFavorite}
+                      isFavorite={isInWishlist(product.id)}
                     />
                   ) : (
                     <Card key={product.id} className="hover:shadow-md transition-shadow">
