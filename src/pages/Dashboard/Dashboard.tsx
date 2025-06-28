@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Gift, Star, TrendingUp, Calendar, MapPin, User, Package, Heart, Settings, Search, Grid, Bell } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Header } from '../../components/layout';
-import { ProductCard } from '../../components/common';
+import { ProductCard, LoadingSpinner } from '../../components/common';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useToast } from '../../components/ui/toast';
-import { FEATURED_PRODUCTS, UPCOMING_EVENTS } from '../../data/mockData';
-import { CATEGORIES } from '../../constants';
-import { Product } from '../../types';
+import { useProducts, useCategories } from '../../hooks/useProducts';
+import { productService } from '../../services/products';
 
 interface DashboardProps {
   onViewProduct?: (productId: number) => void;
@@ -40,14 +39,34 @@ export const Dashboard = ({
   onViewOrderHistory
 }: DashboardProps): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
+  
   const { getTotalItems, addToCart } = useCart();
   const { user, logout, requireAuth } = useAuth();
   const { toggleWishlist, isInWishlist, getWishlistCount } = useWishlist();
   const { addToast } = useToast();
+  const { categories } = useCategories();
 
-  const handleProductClick = (productId: number) => {
+  // Load featured products
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      try {
+        const products = await productService.getFeaturedProducts();
+        setFeaturedProducts(products);
+      } catch (error) {
+        console.error('Error loading featured products:', error);
+      } finally {
+        setIsLoadingFeatured(false);
+      }
+    };
+
+    loadFeaturedProducts();
+  }, []);
+
+  const handleProductClick = (productId: string) => {
     if (onViewProduct) {
-      onViewProduct(productId);
+      onViewProduct(parseInt(productId));
     }
   };
 
@@ -81,59 +100,87 @@ export const Dashboard = ({
     }
   };
 
-  const handleQuickAddToCart = (product: Product, e: React.MouseEvent) => {
+  const handleQuickAddToCart = async (product: any, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    requireAuth(() => {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.priceNumber,
-        image: product.image,
-        category: product.category,
-        inStock: true,
-        maxQuantity: product.maxQuantity
-      });
-
-      addToast({
-        type: 'success',
-        title: 'Đã thêm vào giỏ hàng',
-        description: `${product.name} đã được thêm vào giỏ hàng`,
-        duration: 3000
-      });
-    });
-  };
-
-  const handleToggleFavorite = (productId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    requireAuth(() => {
-      const wasInWishlist = isInWishlist(productId);
-      toggleWishlist(productId);
-      const product = FEATURED_PRODUCTS.find(p => p.id === productId);
-      
-      if (wasInWishlist) {
-        addToast({
-          type: 'info',
-          title: 'Đã xóa khỏi yêu thích',
-          description: `${product?.name} đã được xóa khỏi danh sách yêu thích`,
-          duration: 3000
+    requireAuth(async () => {
+      try {
+        await addToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          originalPrice: product.original_price,
+          image: product.images[0] || '',
+          category: product.category?.name || '',
+          inStock: product.stock_count > 0,
+          maxQuantity: product.max_quantity
         });
-      } else {
+
         addToast({
           type: 'success',
-          title: 'Đã thêm vào yêu thích',
-          description: `${product?.name} đã được thêm vào danh sách yêu thích`,
+          title: 'Đã thêm vào giỏ hàng',
+          description: `${product.name} đã được thêm vào giỏ hàng`,
+          duration: 3000
+        });
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'Lỗi',
+          description: 'Không thể thêm sản phẩm vào giỏ hàng',
           duration: 3000
         });
       }
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    if (onLogout) {
-      onLogout();
+  const handleToggleFavorite = async (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    requireAuth(async () => {
+      try {
+        const wasInWishlist = isInWishlist(productId);
+        await toggleWishlist(productId);
+        const product = featuredProducts.find(p => p.id === productId);
+        
+        if (wasInWishlist) {
+          addToast({
+            type: 'info',
+            title: 'Đã xóa khỏi yêu thích',
+            description: `${product?.name} đã được xóa khỏi danh sách yêu thích`,
+            duration: 3000
+          });
+        } else {
+          addToast({
+            type: 'success',
+            title: 'Đã thêm vào yêu thích',
+            description: `${product?.name} đã được thêm vào danh sách yêu thích`,
+            duration: 3000
+          });
+        }
+      } catch (error) {
+        addToast({
+          type: 'error',
+          title: 'Lỗi',
+          description: 'Không thể cập nhật danh sách yêu thích',
+          duration: 3000
+        });
+      }
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      if (onLogout) {
+        onLogout();
+      }
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Lỗi đăng xuất',
+        description: 'Có lỗi xảy ra khi đăng xuất',
+        duration: 3000
+      });
     }
   };
 
@@ -147,8 +194,22 @@ export const Dashboard = ({
     { label: 'Điểm tích lũy', value: user?.points?.toLocaleString() || '0', icon: <Star className="h-8 w-8 opacity-80" />, color: 'from-[#49bbbd] to-[#3a9a9c]' },
     { label: 'Hạng thành viên', value: user?.level || 'New Member', icon: <Gift className="h-8 w-8 opacity-80" />, color: 'from-[#ccb3ac] to-[#bba39c]' },
     { label: 'Quà đã tặng', value: '24', icon: <Heart className="h-8 w-8" />, color: 'bg-white', textColor: 'text-red-500' },
-    { label: 'Sự kiện sắp tới', value: UPCOMING_EVENTS.length.toString(), icon: <Calendar className="h-8 w-8" />, color: 'bg-white', textColor: 'text-blue-500' }
+    { label: 'Sự kiện sắp tới', value: '3', icon: <Calendar className="h-8 w-8" />, color: 'bg-white', textColor: 'text-blue-500' }
   ];
+
+  const convertToLegacyProduct = (product: any) => ({
+    id: parseInt(product.id),
+    name: product.name,
+    price: new Intl.NumberFormat('vi-VN').format(product.price) + 'đ',
+    priceNumber: product.price,
+    originalPrice: product.original_price ? new Intl.NumberFormat('vi-VN').format(product.original_price) + 'đ' : undefined,
+    image: product.images[0] || '',
+    rating: product.rating,
+    category: product.category?.name || '',
+    isPopular: product.is_popular,
+    isTrending: product.is_trending,
+    maxQuantity: product.max_quantity
+  });
 
   return (
     <div className="min-h-screen bg-[#fffefc]">
@@ -169,7 +230,7 @@ export const Dashboard = ({
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2 font-['Poppins',Helvetica]">
-            Chào mừng trở lại, {user?.name?.split(' ').pop()}! 👋
+            Chào mừng trở lại, {user?.full_name?.split(' ').pop() || 'bạn'}! 👋
           </h2>
           <p className="text-gray-600">
             Hôm nay bạn muốn tìm món quà gì đặc biệt?
@@ -205,9 +266,9 @@ export const Dashboard = ({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-4 gap-4">
-                  {CATEGORIES.map((category, index) => (
+                  {categories.map((category) => (
                     <Button
-                      key={index}
+                      key={category.id}
                       variant="ghost"
                       onClick={() => handleCategoryClick(category.name)}
                       className={`h-20 flex flex-col items-center justify-center space-y-2 ${category.color} hover:scale-105 transition-transform`}
@@ -229,18 +290,24 @@ export const Dashboard = ({
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {FEATURED_PRODUCTS.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      onProductClick={handleProductClick}
-                      onAddToCart={handleQuickAddToCart}
-                      onToggleFavorite={handleToggleFavorite}
-                      isFavorite={isInWishlist(product.id)}
-                    />
-                  ))}
-                </div>
+                {isLoadingFeatured ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {featuredProducts.slice(0, 4).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={convertToLegacyProduct(product)}
+                        onProductClick={handleProductClick}
+                        onAddToCart={handleQuickAddToCart}
+                        onToggleFavorite={handleToggleFavorite}
+                        isFavorite={isInWishlist(product.id)}
+                      />
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -256,7 +323,11 @@ export const Dashboard = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {UPCOMING_EVENTS.map((event) => (
+                {[
+                  { id: 1, title: 'Sinh nhật mẹ', date: '15/02/2025', type: 'Sinh nhật', daysLeft: 12 },
+                  { id: 2, title: 'Valentine', date: '14/02/2025', type: 'Lễ tình nhân', daysLeft: 11 },
+                  { id: 3, title: 'Kỷ niệm ngày cưới', date: '20/03/2025', type: 'Kỷ niệm', daysLeft: 45 }
+                ].map((event) => (
                   <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{event.title}</h4>

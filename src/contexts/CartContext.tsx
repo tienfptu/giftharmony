@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { cartService, type CartItemWithProduct } from '../services/cart';
+import { useAuth } from './AuthContext';
 
 export interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -14,12 +16,14 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Omit<CartItem, 'quantity'>, quantity?: number) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
-  clearCart: () => void;
+  isLoading: boolean;
+  addToCart: (product: Omit<CartItem, 'quantity'>, quantity?: number) => Promise<void>;
+  removeFromCart: (id: string) => Promise<void>;
+  updateQuantity: (id: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  refreshCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -37,77 +41,93 @@ interface CartProviderProps {
 }
 
 export const CartProvider = ({ children }: CartProviderProps) => {
-  const [items, setItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      name: 'Hoa hồng đỏ cao cấp',
-      price: 299000,
-      originalPrice: 399000,
-      image: 'https://images.pexels.com/photos/56866/garden-rose-red-pink-56866.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 2,
-      category: 'Hoa tươi',
-      inStock: true,
-      maxQuantity: 15
-    },
-    {
-      id: 2,
-      name: 'Đồng hồ thông minh',
-      price: 2999000,
-      image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 1,
-      category: 'Công nghệ',
-      inStock: true,
-      maxQuantity: 5
-    },
-    {
-      id: 3,
-      name: 'Chocolate handmade',
-      price: 450000,
-      image: 'https://images.pexels.com/photos/918327/pexels-photo-918327.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 1,
-      category: 'Đồ ăn',
-      inStock: false,
-      maxQuantity: 0
-    }
-  ]);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
-  const addToCart = (product: Omit<CartItem, 'quantity'>, quantity = 1) => {
-    setItems(currentItems => {
-      const existingItem = currentItems.find(item => item.id === product.id);
-      
-      if (existingItem) {
-        return currentItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, item.maxQuantity) }
-            : item
-        );
-      }
-      
-      return [...currentItems, { ...product, quantity }];
-    });
-  };
+  const convertCartItem = (item: CartItemWithProduct): CartItem => ({
+    id: item.product.id,
+    name: item.product.name,
+    price: item.product.price,
+    originalPrice: item.product.original_price || undefined,
+    image: item.product.images[0] || '',
+    quantity: item.quantity,
+    category: item.product.category?.name || '',
+    inStock: item.product.stock_count > 0,
+    maxQuantity: item.product.max_quantity
+  });
 
-  const removeFromCart = (id: number) => {
-    setItems(currentItems => currentItems.filter(item => item.id !== id));
-  };
-
-  const updateQuantity = (id: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(id);
+  const refreshCart = async () => {
+    if (!user) {
+      setItems([]);
       return;
     }
 
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.min(quantity, item.maxQuantity) }
-          : item
-      )
-    );
+    setIsLoading(true);
+    try {
+      const cartItems = await cartService.getCartItems(user.id);
+      setItems(cartItems.map(convertCartItem));
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const clearCart = () => {
-    setItems([]);
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshCart();
+    } else {
+      setItems([]);
+    }
+  }, [isAuthenticated, user]);
+
+  const addToCart = async (product: Omit<CartItem, 'quantity'>, quantity = 1) => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      await cartService.addToCart(user.id, product.id, quantity);
+      await refreshCart();
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      throw error;
+    }
+  };
+
+  const removeFromCart = async (productId: string) => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      await cartService.removeFromCart(user.id, productId);
+      await refreshCart();
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      throw error;
+    }
+  };
+
+  const updateQuantity = async (productId: string, quantity: number) => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      await cartService.updateCartItem(user.id, productId, quantity);
+      await refreshCart();
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      throw error;
+    }
+  };
+
+  const clearCart = async () => {
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      await cartService.clearCart(user.id);
+      setItems([]);
+    } catch (error) {
+      console.error('Error clearing cart:', error);
+      throw error;
+    }
   };
 
   const getTotalItems = () => {
@@ -120,12 +140,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const value: CartContextType = {
     items,
+    isLoading,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
+    refreshCart
   };
 
   return (
