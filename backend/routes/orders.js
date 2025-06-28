@@ -7,10 +7,10 @@ const router = express.Router();
 // Get user orders
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const [orders] = await pool.execute(
+    const result = await pool.query(
       `SELECT o.*, 
-       GROUP_CONCAT(
-         JSON_OBJECT(
+       json_agg(
+         json_build_object(
            'product_id', oi.product_id,
            'product_name', p.name,
            'quantity', oi.quantity,
@@ -20,13 +20,13 @@ router.get('/', authenticateToken, async (req, res) => {
        FROM orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
        LEFT JOIN products p ON oi.product_id = p.id
-       WHERE o.user_id = ?
+       WHERE o.user_id = $1
        GROUP BY o.id
        ORDER BY o.created_at DESC`,
       [req.user.id]
     );
 
-    res.json(orders);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -35,26 +35,26 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // Create order
 router.post('/', authenticateToken, async (req, res) => {
-  const connection = await pool.getConnection();
+  const client = await pool.connect();
   
   try {
-    await connection.beginTransaction();
+    await client.query('BEGIN');
 
     const { items, shipping_address } = req.body;
     let total_amount = 0;
 
     // Calculate total and validate stock
     for (const item of items) {
-      const [products] = await connection.execute(
-        'SELECT price, stock_quantity FROM products WHERE id = ? AND is_active = true',
+      const productResult = await client.query(
+        'SELECT price, stock_quantity FROM products WHERE id = $1 AND is_active = true',
         [item.product_id]
       );
 
-      if (products.length === 0) {
+      if (productResult.rows.length === 0) {
         throw new Error(`Product ${item.product_id} not found`);
       }
 
-      const product = products[0];
+      const product = productResult.rows[0];
       if (product.stock_quantity < item.quantity) {
         throw new Error(`Insufficient stock for product ${item.product_id}`);
       }
@@ -63,38 +63,38 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Create order
-    const [orderResult] = await connection.execute(
-      'INSERT INTO orders (user_id, total_amount, shipping_address) VALUES (?, ?, ?)',
+    const orderResult = await client.query(
+      'INSERT INTO orders (user_id, total_amount, shipping_address) VALUES ($1, $2, $3) RETURNING id',
       [req.user.id, total_amount, shipping_address]
     );
 
-    const orderId = orderResult.insertId;
+    const orderId = orderResult.rows[0].id;
 
     // Create order items and update stock
     for (const item of items) {
-      const [products] = await connection.execute(
-        'SELECT price FROM products WHERE id = ?',
+      const productResult = await client.query(
+        'SELECT price FROM products WHERE id = $1',
         [item.product_id]
       );
 
-      await connection.execute(
-        'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
-        [orderId, item.product_id, item.quantity, products[0].price]
+      await client.query(
+        'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
+        [orderId, item.product_id, item.quantity, productResult.rows[0].price]
       );
 
-      await connection.execute(
-        'UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?',
+      await client.query(
+        'UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2',
         [item.quantity, item.product_id]
       );
     }
 
     // Clear user's cart
-    await connection.execute(
-      'DELETE FROM cart WHERE user_id = ?',
+    await client.query(
+      'DELETE FROM cart WHERE user_id = $1',
       [req.user.id]
     );
 
-    await connection.commit();
+    await client.query('COMMIT');
 
     res.status(201).json({
       message: 'Order created successfully',
@@ -102,21 +102,21 @@ router.post('/', authenticateToken, async (req, res) => {
       total_amount
     });
   } catch (error) {
-    await connection.rollback();
+    await client.query('ROLLBACK');
     console.error('Create order error:', error);
     res.status(400).json({ message: error.message });
   } finally {
-    connection.release();
+    client.release();
   }
 });
 
 // Get all orders (Admin only)
 router.get('/admin', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const [orders] = await pool.execute(
+    const result = await pool.query(
       `SELECT o.*, u.email, u.first_name, u.last_name,
-       GROUP_CONCAT(
-         JSON_OBJECT(
+       json_agg(
+         json_build_object(
            'product_id', oi.product_id,
            'product_name', p.name,
            'quantity', oi.quantity,
@@ -127,11 +127,11 @@ router.get('/admin', authenticateToken, requireAdmin, async (req, res) => {
        JOIN users u ON o.user_id = u.id
        LEFT JOIN order_items oi ON o.id = oi.order_id
        LEFT JOIN products p ON oi.product_id = p.id
-       GROUP BY o.id
+       GROUP BY o.id, u.email, u.first_name, u.last_name
        ORDER BY o.created_at DESC`
     );
 
-    res.json(orders);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get admin orders error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -148,12 +148,12 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const [result] = await pool.execute(
-      'UPDATE orders SET status = ? WHERE id = ?',
+    const result = await pool.query(
+      'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
       [status, req.params.id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Order not found' });
     }
 

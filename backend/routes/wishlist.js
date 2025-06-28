@@ -7,16 +7,16 @@ const router = express.Router();
 // Get user's wishlist
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const [wishlistItems] = await pool.execute(
+    const result = await pool.query(
       `SELECT w.*, p.name, p.price, p.image_url, p.stock_quantity
        FROM wishlist w
        JOIN products p ON w.product_id = p.id
-       WHERE w.user_id = ? AND p.is_active = true
+       WHERE w.user_id = $1 AND p.is_active = true
        ORDER BY w.created_at DESC`,
       [req.user.id]
     );
 
-    res.json(wishlistItems);
+    res.json(result.rows);
   } catch (error) {
     console.error('Get wishlist error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -29,28 +29,28 @@ router.post('/', authenticateToken, async (req, res) => {
     const { product_id } = req.body;
 
     // Check if product exists and is active
-    const [products] = await pool.execute(
-      'SELECT id FROM products WHERE id = ? AND is_active = true',
+    const productResult = await pool.query(
+      'SELECT id FROM products WHERE id = $1 AND is_active = true',
       [product_id]
     );
 
-    if (products.length === 0) {
+    if (productResult.rows.length === 0) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
     // Check if item already exists in wishlist
-    const [existingItems] = await pool.execute(
-      'SELECT id FROM wishlist WHERE user_id = ? AND product_id = ?',
+    const existingResult = await pool.query(
+      'SELECT id FROM wishlist WHERE user_id = $1 AND product_id = $2',
       [req.user.id, product_id]
     );
 
-    if (existingItems.length > 0) {
+    if (existingResult.rows.length > 0) {
       return res.status(400).json({ message: 'Item already in wishlist' });
     }
 
     // Add to wishlist
-    await pool.execute(
-      'INSERT INTO wishlist (user_id, product_id) VALUES (?, ?)',
+    await pool.query(
+      'INSERT INTO wishlist (user_id, product_id) VALUES ($1, $2)',
       [req.user.id, product_id]
     );
 
@@ -64,12 +64,12 @@ router.post('/', authenticateToken, async (req, res) => {
 // Remove item from wishlist
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const [result] = await pool.execute(
-      'DELETE FROM wishlist WHERE id = ? AND user_id = ?',
+    const result = await pool.query(
+      'DELETE FROM wishlist WHERE id = $1 AND user_id = $2 RETURNING *',
       [req.params.id, req.user.id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Wishlist item not found' });
     }
 
@@ -83,12 +83,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // Remove item from wishlist by product ID
 router.delete('/product/:productId', authenticateToken, async (req, res) => {
   try {
-    const [result] = await pool.execute(
-      'DELETE FROM wishlist WHERE product_id = ? AND user_id = ?',
+    const result = await pool.query(
+      'DELETE FROM wishlist WHERE product_id = $1 AND user_id = $2 RETURNING *',
       [req.params.productId, req.user.id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Wishlist item not found' });
     }
 

@@ -8,10 +8,10 @@ const router = express.Router();
 // Get all categories
 router.get("/", async (req, res) => {
   try {
-    const [categories] = await pool.execute(
+    const result = await pool.query(
       "SELECT * FROM categories WHERE is_active = true ORDER BY name"
     );
-    res.json(categories);
+    res.json(result.rows);
   } catch (error) {
     console.error("Get categories error:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -21,16 +21,16 @@ router.get("/", async (req, res) => {
 // Get category by ID
 router.get("/:id", async (req, res) => {
   try {
-    const [categories] = await pool.execute(
-      "SELECT * FROM categories WHERE id = ? AND is_active = true",
+    const result = await pool.query(
+      "SELECT * FROM categories WHERE id = $1 AND is_active = true",
       [req.params.id]
     );
 
-    if (categories.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res.json(categories[0]);
+    res.json(result.rows[0]);
   } catch (error) {
     console.error("Get category error:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -47,19 +47,14 @@ router.post(
     try {
       const { name, description, image_url } = req.body;
 
-      const [result] = await pool.execute(
-        "INSERT INTO categories (name, description, image_url) VALUES (?, ?, ?)",
+      const result = await pool.query(
+        "INSERT INTO categories (name, description, image_url) VALUES ($1, $2, $3) RETURNING *",
         [name, description, image_url]
       );
 
       res.status(201).json({
         message: "Category created successfully",
-        category: {
-          id: result.insertId,
-          name,
-          description,
-          image_url,
-        },
+        category: result.rows[0],
       });
     } catch (error) {
       console.error("Create category error:", error);
@@ -78,12 +73,12 @@ router.put(
     try {
       const { name, description, image_url } = req.body;
 
-      const [result] = await pool.execute(
-        "UPDATE categories SET name = ?, description = ?, image_url = ? WHERE id = ?",
+      const result = await pool.query(
+        "UPDATE categories SET name = $1, description = $2, image_url = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING *",
         [name, description, image_url, req.params.id]
       );
 
-      if (result.affectedRows === 0) {
+      if (result.rows.length === 0) {
         return res.status(404).json({ message: "Category not found" });
       }
 
@@ -98,12 +93,12 @@ router.put(
 // Delete category (Admin only)
 router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const [result] = await pool.execute(
-      "UPDATE categories SET is_active = false WHERE id = ?",
+    const result = await pool.query(
+      "UPDATE categories SET is_active = false WHERE id = $1 RETURNING *",
       [req.params.id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "Category not found" });
     }
 

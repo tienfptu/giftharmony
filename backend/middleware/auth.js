@@ -11,16 +11,16 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const [users] = await pool.execute(
-      'SELECT id, email, first_name, last_name, role FROM users WHERE id = ? AND is_active = true',
+    const result = await pool.query(
+      'SELECT id, email, first_name, last_name, role FROM users WHERE id = $1 AND is_active = true',
       [decoded.userId]
     );
 
-    if (users.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
-    req.user = users[0];
+    req.user = result.rows[0];
     next();
   } catch (error) {
     return res.status(403).json({ message: 'Invalid token' });
