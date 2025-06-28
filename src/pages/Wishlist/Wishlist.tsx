@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Heart, Share2, ShoppingCart, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { EmptyState, ProductCard } from '../../components/common';
+import { EmptyState, ProductCard, LoadingSpinner } from '../../components/common';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useToast } from '../../components/ui/toast';
-import { FEATURED_PRODUCTS } from '../../data/mockData';
+import { apiService } from '../../services/api';
 import { Product } from '../../types';
 
 interface WishlistProps {
@@ -18,15 +18,47 @@ interface WishlistProps {
 
 export const Wishlist = ({ onBack, onViewProduct, onViewCart }: WishlistProps): JSX.Element => {
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const { addToCart } = useCart();
   const { requireAuth } = useAuth();
-  const { wishlistItems, removeFromWishlist, toggleWishlist, isInWishlist } = useWishlist();
+  const { wishlistItems, removeFromWishlist, toggleWishlist, isInWishlist, getWishlistCount } = useWishlist();
   const { addToast } = useToast();
 
-  const wishlistProducts = FEATURED_PRODUCTS.filter(product => 
-    wishlistItems.includes(product.id)
-  );
+  useEffect(() => {
+    loadWishlistProducts();
+  }, [wishlistItems]);
+
+  const loadWishlistProducts = async () => {
+    if (wishlistItems.length === 0) {
+      setWishlistProducts([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const wishlistData = await apiService.getWishlist();
+      const transformedProducts = wishlistData.map((item: any) => ({
+        id: item.product_id,
+        name: item.name,
+        price: new Intl.NumberFormat('vi-VN').format(item.price) + 'đ',
+        priceNumber: item.price,
+        image: item.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+        rating: 4.5, // Default rating
+        category: 'Sản phẩm',
+        maxQuantity: item.stock_quantity || 10,
+        inStock: item.stock_quantity > 0
+      }));
+      setWishlistProducts(transformedProducts);
+    } catch (error) {
+      console.error('Failed to load wishlist products:', error);
+      setWishlistProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleRemoveFromWishlist = (productId: number) => {
     removeFromWishlist(productId);
@@ -144,6 +176,14 @@ export const Wishlist = ({ onBack, onViewProduct, onViewCart }: WishlistProps): 
       duration: 3000
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fffefc] flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fffefc]">
@@ -281,7 +321,8 @@ export const Wishlist = ({ onBack, onViewProduct, onViewCart }: WishlistProps): 
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <div className="text-2xl font-bold text-[#49bbbd]">
-                      {Math.round(wishlistProducts.reduce((sum, p) => sum + p.rating, 0) / wishlistProducts.length * 10) / 10}
+                      {wishlistProducts.length > 0 ? 
+                        Math.round(wishlistProducts.reduce((sum, p) => sum + p.rating, 0) / wishlistProducts.length * 10) / 10 : 0}
                     </div>
                     <div className="text-sm text-gray-600">Đánh giá trung bình</div>
                   </div>
