@@ -6,9 +6,10 @@ import { Input } from '../../components/ui/input';
 import { ProductCard, EmptyState, LoadingSpinner } from '../../components/common';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 import { useToast } from '../../components/ui/toast';
 import { useDebounce } from '../../hooks/useDebounce';
-import { FEATURED_PRODUCTS } from '../../data/mockData';
+import { apiService } from '../../services/api';
 import { CATEGORIES } from '../../constants';
 import { Product } from '../../types';
 
@@ -32,7 +33,6 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   
   const [filters, setFilters] = useState<FilterState>({
     category: '',
@@ -43,69 +43,90 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
 
   const { addToCart } = useCart();
   const { requireAuth } = useAuth();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { addToast } = useToast();
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
-    // Simulate loading products
+    searchProducts();
+  }, [debouncedSearchQuery, filters]);
+
+  const searchProducts = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setProducts(FEATURED_PRODUCTS);
+    try {
+      const searchParams: any = {};
+      
+      if (debouncedSearchQuery) {
+        searchParams.search = debouncedSearchQuery;
+      }
+      
+      if (filters.category) {
+        searchParams.category = filters.category;
+      }
+      
+      searchParams.limit = 50; // Get more results for filtering
+
+      const response = await apiService.getProducts(searchParams);
+      
+      let transformedProducts = response.products.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        price: new Intl.NumberFormat('vi-VN').format(product.price) + 'đ',
+        priceNumber: product.price,
+        image: product.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
+        rating: 4.5, // Default rating
+        category: product.category_name || 'Sản phẩm',
+        maxQuantity: product.stock_quantity || 10,
+        inStock: product.stock_quantity > 0
+      }));
+
+      // Apply client-side filters
+      transformedProducts = transformedProducts.filter((product: Product) => {
+        // Price range filter
+        if (product.priceNumber < filters.priceRange[0] || product.priceNumber > filters.priceRange[1]) {
+          return false;
+        }
+        
+        // Rating filter
+        if (filters.rating > 0 && product.rating < filters.rating) {
+          return false;
+        }
+        
+        return true;
+      });
+
+      // Sort products
+      switch (filters.sortBy) {
+        case 'price-low':
+          transformedProducts.sort((a, b) => a.priceNumber - b.priceNumber);
+          break;
+        case 'price-high':
+          transformedProducts.sort((a, b) => b.priceNumber - a.priceNumber);
+          break;
+        case 'rating':
+          transformedProducts.sort((a, b) => b.rating - a.rating);
+          break;
+        case 'name':
+          transformedProducts.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        default:
+          // relevance - keep original order
+          break;
+      }
+
+      setProducts(transformedProducts);
+    } catch (error) {
+      console.error('Failed to search products:', error);
+      setProducts([]);
+      addToast({
+        type: 'error',
+        title: 'Lỗi tìm kiếm',
+        description: 'Không thể tìm kiếm sản phẩm',
+        duration: 3000
+      });
+    } finally {
       setIsLoading(false);
-    }, 500);
-  }, []);
-
-  useEffect(() => {
-    filterAndSortProducts();
-  }, [debouncedSearchQuery, filters, products]);
-
-  const filterAndSortProducts = () => {
-    let filtered = [...products];
-
-    // Search filter
-    if (debouncedSearchQuery) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-      );
     }
-
-    // Category filter
-    if (filters.category) {
-      filtered = filtered.filter(product => product.category === filters.category);
-    }
-
-    // Price range filter
-    filtered = filtered.filter(product => 
-      product.priceNumber >= filters.priceRange[0] && 
-      product.priceNumber <= filters.priceRange[1]
-    );
-
-    // Rating filter
-    if (filters.rating > 0) {
-      filtered = filtered.filter(product => product.rating >= filters.rating);
-    }
-
-    // Sort
-    switch (filters.sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.priceNumber - b.priceNumber);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.priceNumber - a.priceNumber);
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        // relevance - keep original order
-        break;
-    }
-
-    setFilteredProducts(filtered);
   };
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
@@ -128,6 +149,32 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
         description: `${product.name} đã được thêm vào giỏ hàng`,
         duration: 3000
       });
+    });
+  };
+
+  const handleToggleFavorite = (productId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    requireAuth(() => {
+      const wasInWishlist = isInWishlist(productId);
+      toggleWishlist(productId);
+      const product = products.find(p => p.id === productId);
+      
+      if (wasInWishlist) {
+        addToast({
+          type: 'info',
+          title: 'Đã xóa khỏi yêu thích',
+          description: `${product?.name} đã được xóa khỏi danh sách yêu thích`,
+          duration: 3000
+        });
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Đã thêm vào yêu thích',
+          description: `${product?.name} đã được thêm vào danh sách yêu thích`,
+          duration: 3000
+        });
+      }
     });
   };
 
@@ -314,7 +361,7 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
                   Kết quả tìm kiếm
                 </h2>
                 <p className="text-gray-600">
-                  {isLoading ? 'Đang tìm kiếm...' : `Tìm thấy ${filteredProducts.length} sản phẩm`}
+                  {isLoading ? 'Đang tìm kiếm...' : `Tìm thấy ${products.length} sản phẩm`}
                   {searchQuery && ` cho "${searchQuery}"`}
                 </p>
               </div>
@@ -328,7 +375,7 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
             )}
 
             {/* Empty State */}
-            {!isLoading && filteredProducts.length === 0 && (
+            {!isLoading && products.length === 0 && (
               <EmptyState
                 icon={<SlidersHorizontal className="h-24 w-24" />}
                 title="Không tìm thấy sản phẩm"
@@ -339,18 +386,20 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
             )}
 
             {/* Products Grid/List */}
-            {!isLoading && filteredProducts.length > 0 && (
+            {!isLoading && products.length > 0 && (
               <div className={viewMode === 'grid' 
                 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
                 : 'space-y-4'
               }>
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   viewMode === 'grid' ? (
                     <ProductCard
                       key={product.id}
                       product={product}
                       onProductClick={onViewProduct}
                       onAddToCart={handleAddToCart}
+                      onToggleFavorite={handleToggleFavorite}
+                      isFavorite={isInWishlist(product.id)}
                     />
                   ) : (
                     <Card key={product.id} className="hover:shadow-md transition-shadow">
@@ -368,11 +417,6 @@ export const Search = ({ onBack, onViewProduct, onViewCart, initialQuery = '' }:
                             <p className="text-sm text-gray-500">{product.category}</p>
                             <div className="flex items-center mt-1">
                               <span className="font-bold text-[#49bbbd] mr-2">{product.price}</span>
-                              {product.originalPrice && (
-                                <span className="text-sm text-gray-400 line-through">
-                                  {product.originalPrice}
-                                </span>
-                              )}
                             </div>
                             <div className="flex items-center mt-1">
                               <span className="text-sm text-gray-600">⭐ {product.rating}</span>

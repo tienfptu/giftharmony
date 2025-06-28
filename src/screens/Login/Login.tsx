@@ -4,138 +4,174 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../components/ui/toast";
 
 interface LoginProps {
   onLoginSuccess?: () => void;
   onAdminLogin?: () => void;
   onBackToLanding?: () => void;
-  defaultTab?: 'login' | 'register';
+  defaultTab?: "login" | "register";
 }
 
-export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTab = 'login' }: LoginProps): JSX.Element => {
+export const Login = ({
+  onLoginSuccess,
+  onAdminLogin,
+  onBackToLanding,
+  defaultTab = "login",
+}: LoginProps): JSX.Element => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [loginForm, setLoginForm] = useState({
-    username: "",
+    email: "",
     password: "",
-    rememberMe: false
+    rememberMe: false,
   });
+
   const [registerForm, setRegisterForm] = useState({
     fullName: "",
     email: "",
-    username: "",
     password: "",
     confirmPassword: "",
-    agreeTerms: false
+    phone: "",
+    agreeTerms: false,
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { login } = useAuth();
+  const { login, register } = useAuth();
+  const { addToast } = useToast();
 
   const validateLoginForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    if (!loginForm.username.trim()) {
-      newErrors.username = "Tên người dùng không được để trống";
+
+    if (!loginForm.email.trim()) {
+      newErrors.email = "Email không được để trống";
+    } else if (!/\S+@\S+\.\S+/.test(loginForm.email)) {
+      newErrors.email = "Email không hợp lệ";
     }
-    
+
     if (!loginForm.password) {
       newErrors.password = "Mật khẩu không được để trống";
     } else if (loginForm.password.length < 6) {
       newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateRegisterForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!registerForm.fullName.trim()) {
       newErrors.fullName = "Họ và tên không được để trống";
     }
-    
+
     if (!registerForm.email.trim()) {
       newErrors.email = "Email không được để trống";
     } else if (!/\S+@\S+\.\S+/.test(registerForm.email)) {
       newErrors.email = "Email không hợp lệ";
     }
-    
-    if (!registerForm.username.trim()) {
-      newErrors.username = "Tên người dùng không được để trống";
-    } else if (registerForm.username.length < 3) {
-      newErrors.username = "Tên người dùng phải có ít nhất 3 ký tự";
-    }
-    
+
     if (!registerForm.password) {
       newErrors.password = "Mật khẩu không được để trống";
     } else if (registerForm.password.length < 6) {
       newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
-    
+
     if (registerForm.password !== registerForm.confirmPassword) {
       newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
     }
-    
+
     if (!registerForm.agreeTerms) {
       newErrors.agreeTerms = "Bạn phải đồng ý với điều khoản sử dụng";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateLoginForm()) {
-      // Check for admin login
-      if (loginForm.username === 'admin' && loginForm.password === 'admin123') {
-        if (onAdminLogin) {
-          onAdminLogin();
-        }
-        return;
-      }
+    if (!validateLoginForm()) return;
 
-      // Simulate successful login
-      const userData = {
-        id: 1,
-        name: loginForm.username,
-        email: `${loginForm.username}@example.com`,
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1',
-        points: 1250,
-        level: 'Gold Member'
-      };
-      
-      login(userData);
-      
-      if (onLoginSuccess) {
+    setIsLoading(true);
+    try {
+      await login(loginForm.email, loginForm.password);
+
+      addToast({
+        type: "success",
+        title: "Đăng nhập thành công",
+        description: "Chào mừng bạn quay trở lại!",
+        duration: 3000,
+      });
+
+      // Check if admin login
+      if (loginForm.email === "admin@example.com" && onAdminLogin) {
+        onAdminLogin();
+      } else if (onLoginSuccess) {
         onLoginSuccess();
       }
+    } catch (error: any) {
+      addToast({
+        type: "error",
+        title: "Đăng nhập thất bại",
+        description: error.message || "Có lỗi xảy ra, vui lòng thử lại",
+        duration: 5000,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateRegisterForm()) {
-      // Simulate successful registration and login
-      const userData = {
-        id: 1,
-        name: registerForm.fullName,
+    if (!validateRegisterForm()) return;
+
+    setIsLoading(true);
+    try {
+      const [firstName, ...lastNameParts] = registerForm.fullName
+        .trim()
+        .split(" ");
+      const lastName = lastNameParts.join(" ") || firstName;
+
+      await register({
         email: registerForm.email,
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1',
-        points: 0,
-        level: 'New Member'
-      };
-      
-      login(userData);
-      
+        password: registerForm.password,
+        first_name: firstName,
+        last_name: lastName,
+        phone: registerForm.phone || undefined,
+      });
+
+      addToast({
+        type: "success",
+        title: "Đăng ký thành công",
+        description: "Tài khoản của bạn đã được tạo thành công!",
+        duration: 3000,
+      });
+
       if (onLoginSuccess) {
         onLoginSuccess();
       }
+    } catch (error: any) {
+      addToast({
+        type: "error",
+        title: "Đăng ký thất bại",
+        description: error.message || "Có lỗi xảy ra, vui lòng thử lại",
+        duration: 5000,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -161,7 +197,13 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
               Chào mừng đến với GiftHarmony
             </h1>
 
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) =>
+                setActiveTab(value as "login" | "register")
+              }
+              className="w-full"
+            >
               <TabsList className="w-full max-w-[333px] h-[59px] bg-[#d3c7c599] rounded-[33px] mx-auto mb-8 sm:mb-14 grid grid-cols-2">
                 <TabsTrigger
                   value="login"
@@ -186,16 +228,24 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
 
                     <div className="mb-6">
                       <label className="block text-left font-['Poppins',Helvetica] font-normal text-black text-sm sm:text-base mb-2">
-                        Tên người dùng
+                        Email
                       </label>
                       <Input
-                        value={loginForm.username}
-                        onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
-                        placeholder="Nhập tên người dùng (admin để vào quản lý)"
-                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.username ? 'border-red-500' : ''}`}
+                        type="email"
+                        value={loginForm.email}
+                        onChange={(e) =>
+                          setLoginForm({ ...loginForm, email: e.target.value })
+                        }
+                        placeholder="Nhập email (admin@example.com để vào quản lý)"
+                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                          errors.email ? "border-red-500" : ""
+                        }`}
+                        disabled={isLoading}
                       />
-                      {errors.username && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.username}</p>
+                      {errors.email && (
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.email}
+                        </p>
                       )}
                     </div>
 
@@ -207,9 +257,17 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         <Input
                           type={showPassword ? "text" : "password"}
                           value={loginForm.password}
-                          onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                          onChange={(e) =>
+                            setLoginForm({
+                              ...loginForm,
+                              password: e.target.value,
+                            })
+                          }
                           placeholder="Nhập mật khẩu (admin123 để vào quản lý)"
-                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.password ? 'border-red-500' : ''}`}
+                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                            errors.password ? "border-red-500" : ""
+                          }`}
+                          disabled={isLoading}
                         />
                         <Button
                           type="button"
@@ -217,6 +275,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -226,7 +285,9 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         </Button>
                       </div>
                       {errors.password && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.password}</p>
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.password}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -236,8 +297,11 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                       <Checkbox
                         id="remember"
                         checked={loginForm.rememberMe}
-                        onCheckedChange={(checked) => setLoginForm({...loginForm, rememberMe: !!checked})}
+                        onCheckedChange={(checked) =>
+                          setLoginForm({ ...loginForm, rememberMe: !!checked })
+                        }
                         className="border-black w-[15px] h-[15px] rounded-none"
+                        disabled={isLoading}
                       />
                       <label
                         htmlFor="remember"
@@ -246,24 +310,27 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         Lưu lại mật khẩu
                       </label>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       className="font-['Poppins',Helvetica] font-light text-black text-xs hover:underline"
+                      disabled={isLoading}
                     >
                       Quên mật khẩu?
                     </button>
                   </div>
 
-                  <Button 
+                  <Button
                     type="submit"
-                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors"
+                    disabled={isLoading}
+                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors disabled:opacity-50"
                   >
-                    Đăng nhập
+                    {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
                   </Button>
 
                   <div className="text-center mt-4">
                     <p className="text-sm text-gray-600">
-                      Tài khoản quản lý: <strong>admin</strong> / <strong>admin123</strong>
+                      Tài khoản quản lý: <strong>admin@example.com</strong> /{" "}
+                      <strong>admin123</strong>
                     </p>
                   </div>
                 </form>
@@ -282,12 +349,22 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                       </label>
                       <Input
                         value={registerForm.fullName}
-                        onChange={(e) => setRegisterForm({...registerForm, fullName: e.target.value})}
+                        onChange={(e) =>
+                          setRegisterForm({
+                            ...registerForm,
+                            fullName: e.target.value,
+                          })
+                        }
                         placeholder="Nhập họ và tên"
-                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.fullName ? 'border-red-500' : ''}`}
+                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                          errors.fullName ? "border-red-500" : ""
+                        }`}
+                        disabled={isLoading}
                       />
                       {errors.fullName && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.fullName}</p>
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.fullName}
+                        </p>
                       )}
                     </div>
 
@@ -298,28 +375,41 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                       <Input
                         type="email"
                         value={registerForm.email}
-                        onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                        onChange={(e) =>
+                          setRegisterForm({
+                            ...registerForm,
+                            email: e.target.value,
+                          })
+                        }
                         placeholder="Nhập địa chỉ email"
-                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.email ? 'border-red-500' : ''}`}
+                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                          errors.email ? "border-red-500" : ""
+                        }`}
+                        disabled={isLoading}
                       />
                       {errors.email && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.email}</p>
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.email}
+                        </p>
                       )}
                     </div>
 
                     <div className="mb-6">
                       <label className="block text-left font-['Poppins',Helvetica] font-normal text-black text-sm sm:text-base mb-2">
-                        Tên người dùng
+                        Số điện thoại (tùy chọn)
                       </label>
                       <Input
-                        value={registerForm.username}
-                        onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
-                        placeholder="Nhập tên người dùng"
-                        className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.username ? 'border-red-500' : ''}`}
+                        value={registerForm.phone}
+                        onChange={(e) =>
+                          setRegisterForm({
+                            ...registerForm,
+                            phone: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập số điện thoại"
+                        className="h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full"
+                        disabled={isLoading}
                       />
-                      {errors.username && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.username}</p>
-                      )}
                     </div>
 
                     <div className="mb-6">
@@ -330,9 +420,17 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         <Input
                           type={showPassword ? "text" : "password"}
                           value={registerForm.password}
-                          onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                          onChange={(e) =>
+                            setRegisterForm({
+                              ...registerForm,
+                              password: e.target.value,
+                            })
+                          }
                           placeholder="Nhập mật khẩu"
-                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.password ? 'border-red-500' : ''}`}
+                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                            errors.password ? "border-red-500" : ""
+                          }`}
+                          disabled={isLoading}
                         />
                         <Button
                           type="button"
@@ -340,6 +438,7 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -349,7 +448,9 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         </Button>
                       </div>
                       {errors.password && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.password}</p>
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.password}
+                        </p>
                       )}
                     </div>
 
@@ -361,16 +462,27 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         <Input
                           type={showConfirmPassword ? "text" : "password"}
                           value={registerForm.confirmPassword}
-                          onChange={(e) => setRegisterForm({...registerForm, confirmPassword: e.target.value})}
+                          onChange={(e) =>
+                            setRegisterForm({
+                              ...registerForm,
+                              confirmPassword: e.target.value,
+                            })
+                          }
                           placeholder="Nhập lại mật khẩu"
-                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                          className={`h-[54px] rounded-[40px] border-[#49bbbd] pl-[30px] pr-[50px] font-['Poppins',Helvetica] font-light text-[#acacac] text-[15px] w-full ${
+                            errors.confirmPassword ? "border-red-500" : ""
+                          }`}
+                          disabled={isLoading}
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="absolute right-3 top-1/2 -translate-y-1/2 h-[18px] w-[18px] p-0"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          disabled={isLoading}
                         >
                           {showConfirmPassword ? (
                             <EyeOffIcon className="h-4 w-4" />
@@ -380,7 +492,9 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                         </Button>
                       </div>
                       {errors.confirmPassword && (
-                        <p className="text-red-500 text-sm mt-1 text-left">{errors.confirmPassword}</p>
+                        <p className="text-red-500 text-sm mt-1 text-left">
+                          {errors.confirmPassword}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -390,33 +504,50 @@ export const Login = ({ onLoginSuccess, onAdminLogin, onBackToLanding, defaultTa
                       <Checkbox
                         id="terms"
                         checked={registerForm.agreeTerms}
-                        onCheckedChange={(checked) => setRegisterForm({...registerForm, agreeTerms: !!checked})}
-                        className={`border-black w-[15px] h-[15px] rounded-none mt-1 flex-shrink-0 ${errors.agreeTerms ? 'border-red-500' : ''}`}
+                        onCheckedChange={(checked) =>
+                          setRegisterForm({
+                            ...registerForm,
+                            agreeTerms: !!checked,
+                          })
+                        }
+                        className={`border-black w-[15px] h-[15px] rounded-none mt-1 flex-shrink-0 ${
+                          errors.agreeTerms ? "border-red-500" : ""
+                        }`}
+                        disabled={isLoading}
                       />
                       <label
                         htmlFor="terms"
                         className="font-['Poppins',Helvetica] font-light text-black text-xs leading-relaxed"
                       >
                         Tôi đồng ý với{" "}
-                        <button type="button" className="underline hover:text-[#49bbbd]">
+                        <button
+                          type="button"
+                          className="underline hover:text-[#49bbbd]"
+                        >
                           Điều khoản sử dụng
                         </button>{" "}
                         và{" "}
-                        <button type="button" className="underline hover:text-[#49bbbd]">
+                        <button
+                          type="button"
+                          className="underline hover:text-[#49bbbd]"
+                        >
                           Chính sách bảo mật
                         </button>
                       </label>
                     </div>
                     {errors.agreeTerms && (
-                      <p className="text-red-500 text-sm mt-1">{errors.agreeTerms}</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.agreeTerms}
+                      </p>
                     )}
                   </div>
 
-                  <Button 
+                  <Button
                     type="submit"
-                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors"
+                    disabled={isLoading}
+                    className="w-full max-w-[437px] h-[49px] bg-[#ccb3ac] hover:bg-[#bba39c] text-black rounded-[36px] font-['Poppins',Helvetica] font-normal text-sm sm:text-base mx-auto block transition-colors disabled:opacity-50"
                   >
-                    Đăng ký
+                    {isLoading ? "Đang đăng ký..." : "Đăng ký"}
                   </Button>
                 </form>
               </TabsContent>

@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { apiService } from "../services/api";
+import { useAuth } from "./AuthContext";
 
 export interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   originalPrice?: number;
@@ -10,16 +18,22 @@ export interface CartItem {
   category: string;
   inStock: boolean;
   maxQuantity: number;
+  product_id?: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Omit<CartItem, 'quantity'>, quantity?: number) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
-  clearCart: () => void;
+  isLoading: boolean;
+  addToCart: (
+    product: Omit<CartItem, "quantity">,
+    quantity?: number
+  ) => Promise<void>;
+  removeFromCart: (id: number) => Promise<void>;
+  updateQuantity: (id: number, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  loadCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -27,7 +41,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
 };
@@ -37,77 +51,111 @@ interface CartProviderProps {
 }
 
 export const CartProvider = ({ children }: CartProviderProps) => {
-  const [items, setItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      name: 'Hoa hồng đỏ cao cấp',
-      price: 299000,
-      originalPrice: 399000,
-      image: 'https://images.pexels.com/photos/56866/garden-rose-red-pink-56866.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 2,
-      category: 'Hoa tươi',
-      inStock: true,
-      maxQuantity: 15
-    },
-    {
-      id: 2,
-      name: 'Đồng hồ thông minh',
-      price: 2999000,
-      image: 'https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 1,
-      category: 'Công nghệ',
-      inStock: true,
-      maxQuantity: 5
-    },
-    {
-      id: 3,
-      name: 'Chocolate handmade',
-      price: 450000,
-      image: 'https://images.pexels.com/photos/918327/pexels-photo-918327.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1',
-      quantity: 1,
-      category: 'Đồ ăn',
-      inStock: false,
-      maxQuantity: 0
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCart();
+    } else {
+      setItems([]);
     }
-  ]);
+  }, [isAuthenticated]);
 
-  const addToCart = (product: Omit<CartItem, 'quantity'>, quantity = 1) => {
-    setItems(currentItems => {
-      const existingItem = currentItems.find(item => item.id === product.id);
-      
-      if (existingItem) {
-        return currentItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, item.maxQuantity) }
-            : item
-        );
-      }
-      
-      return [...currentItems, { ...product, quantity }];
-    });
+  const loadCart = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setIsLoading(true);
+      const cartData = await apiService.getCart();
+
+      // Transform backend cart data to frontend format
+      const transformedItems: CartItem[] = cartData.map((item: any) => ({
+        id: item.id,
+        product_id: item.product_id,
+        name: item.name,
+        price: parseFloat(item.price),
+        image:
+          item.image_url ||
+          "https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&dpr=1",
+        quantity: item.quantity,
+        category: "Product", // Default category
+        inStock: item.stock_quantity > 0,
+        maxQuantity: item.stock_quantity,
+      }));
+
+      setItems(transformedItems);
+    } catch (error) {
+      console.error("Failed to load cart:", error);
+      setItems([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const removeFromCart = (id: number) => {
-    setItems(currentItems => currentItems.filter(item => item.id !== id));
+  const addToCart = async (
+    product: Omit<CartItem, "quantity">,
+    quantity = 1
+  ) => {
+    if (!isAuthenticated) {
+      throw new Error("Please login to add items to cart");
+    }
+
+    try {
+      await apiService.addToCart(product.id, quantity);
+      await loadCart(); // Reload cart to get updated data
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      throw error;
+    }
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const removeFromCart = async (id: number) => {
+    if (!isAuthenticated) return;
+
+    try {
+      await apiService.removeFromCart(id);
+      setItems((currentItems) => currentItems.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("Failed to remove from cart:", error);
+      throw error;
+    }
+  };
+
+  const updateQuantity = async (id: number, quantity: number) => {
+    if (!isAuthenticated) return;
+
     if (quantity <= 0) {
-      removeFromCart(id);
+      await removeFromCart(id);
       return;
     }
 
-    setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.min(quantity, item.maxQuantity) }
-          : item
-      )
-    );
+    try {
+      await apiService.updateCartItem(id, quantity);
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === id
+            ? { ...item, quantity: Math.min(quantity, item.maxQuantity) }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update cart:", error);
+      throw error;
+    }
   };
 
-  const clearCart = () => {
-    setItems([]);
+  const clearCart = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      await apiService.clearCart();
+      setItems([]);
+    } catch (error) {
+      console.error("Failed to clear cart:", error);
+      throw error;
+    }
   };
 
   const getTotalItems = () => {
@@ -115,22 +163,20 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const getTotalPrice = () => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const value: CartContextType = {
     items,
+    isLoading,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
+    loadCart,
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

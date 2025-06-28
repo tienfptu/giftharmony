@@ -1,21 +1,39 @@
-import React from 'react';
-import { CheckCircle, Package, Calendar, MapPin, Phone, Mail, ArrowRight } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import React from "react";
+import {
+  CheckCircle,
+  Package,
+  Calendar,
+  MapPin,
+  Phone,
+  Mail,
+  ArrowRight,
+} from "lucide-react";
+import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 
 interface OrderSuccessProps {
   onBackToDashboard: () => void;
   onViewOrders: () => void;
 }
 
-export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessProps): JSX.Element => {
+export const OrderSuccess = ({
+  onBackToDashboard,
+  onViewOrders,
+}: OrderSuccessProps): JSX.Element => {
   const orderInfo = {
     id: `GH${Date.now().toString().slice(-6)}`,
-    date: new Date().toLocaleDateString('vi-VN'),
-    estimatedDelivery: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
-    total: '3.748.000đ',
+    date: new Date().toLocaleDateString("vi-VN"),
+    estimatedDelivery: new Date(
+      Date.now() + 2 * 24 * 60 * 60 * 1000
+    ).toLocaleDateString("vi-VN"),
+    total: "3.748.000đ",
     items: 3,
-    status: 'Đang xử lý'
+    status: "Đang xử lý",
   };
 
   return (
@@ -30,7 +48,8 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
             Đặt hàng thành công!
           </h1>
           <p className="text-lg text-gray-600">
-            Cảm ơn bạn đã tin tưởng GiftHarmony. Đơn hàng của bạn đã được tiếp nhận.
+            Cảm ơn bạn đã tin tưởng GiftHarmony. Đơn hàng của bạn đã được tiếp
+            nhận.
           </p>
         </div>
 
@@ -46,7 +65,9 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-600">Mã đơn hàng</p>
-                <p className="font-semibold text-lg text-[#49bbbd]">{orderInfo.id}</p>
+                <p className="font-semibold text-lg text-[#49bbbd]">
+                  {orderInfo.id}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Ngày đặt</p>
@@ -84,7 +105,9 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
         {/* Next Steps */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-['Poppins',Helvetica]">Bước tiếp theo</CardTitle>
+            <CardTitle className="font-['Poppins',Helvetica]">
+              Bước tiếp theo
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
@@ -94,27 +117,33 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Xác nhận đơn hàng</p>
-                  <p className="text-sm text-gray-600">Chúng tôi sẽ gọi điện xác nhận trong 30 phút</p>
+                  <p className="text-sm text-gray-600">
+                    Chúng tôi sẽ gọi điện xác nhận trong 30 phút
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm font-medium">
                   2
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Chuẩn bị hàng</p>
-                  <p className="text-sm text-gray-600">Đóng gói cẩn thận và kiểm tra chất lượng</p>
+                  <p className="text-sm text-gray-600">
+                    Đóng gói cẩn thận và kiểm tra chất lượng
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm font-medium">
                   3
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Giao hàng</p>
-                  <p className="text-sm text-gray-600">Shipper sẽ liên hệ trước khi giao</p>
+                  <p className="text-sm text-gray-600">
+                    Shipper sẽ liên hệ trước khi giao
+                  </p>
                 </div>
               </div>
             </div>
@@ -124,7 +153,9 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
         {/* Contact Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-['Poppins',Helvetica]">Cần hỗ trợ?</CardTitle>
+            <CardTitle className="font-['Poppins',Helvetica]">
+              Cần hỗ trợ?
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -171,7 +202,8 @@ export const OrderSuccess = ({ onBackToDashboard, onViewOrders }: OrderSuccessPr
             Cảm ơn bạn đã chọn GiftHarmony! 💝
           </h3>
           <p className="text-gray-600">
-            Chúng tôi cam kết mang đến cho bạn trải nghiệm mua sắm tuyệt vời nhất.
+            Chúng tôi cam kết mang đến cho bạn trải nghiệm mua sắm tuyệt vời
+            nhất.
           </p>
         </div>
       </div>
